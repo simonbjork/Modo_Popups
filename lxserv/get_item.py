@@ -13,18 +13,20 @@
 #       an update to the proxy's filter, using a regex as the filter rule.
 #   5- Process the selected data and do something with it.
 
+# February 2021: Updated to work with Qt.py by Simon Bjork
 
 import os
 import re
 import traceback
+import sys
+
+# Append the bundled Qt.py at the beginning of sys.path.
+sys.path.insert(0, "{0}/vendor".format(os.path.dirname(__file__)))
+from Qt import QtCore, QtGui, QtWidgets
 
 import lx
 import lxu
 import modo
-
-from PySide.QtGui import *
-from PySide.QtCore import *
-
 
 # container for user-facing names
 DATALIST = []
@@ -72,7 +74,7 @@ def parse_all_the_things():
                     # lx.out(traceback.format_exc())
 
 
-class CustomStringModel(QStringListModel):
+class CustomStringModel(QtCore.QStringListModel):
     '''
     Custom Qt Data model derived from a simple string list.
     '''
@@ -83,7 +85,7 @@ class CustomStringModel(QStringListModel):
         super(CustomStringModel, self).__init__(parent)
         self._data = data
 
-    def rowCount(self, parent=QModelIndex()):
+    def rowCount(self, parent=QtCore.QModelIndex()):
         '''
         Boilerplate
         '''
@@ -96,11 +98,11 @@ class CustomStringModel(QStringListModel):
         row = index.row()
         column = index.column()
         value = self._data[row]
-        if role == Qt.DisplayRole:
+        if role == QtCore.Qt.DisplayRole:
             return value
 
 
-class Popup(QDialog):
+class Popup(QtWidgets.QDialog):
     '''
     Modal pop-up search field
     '''
@@ -108,7 +110,7 @@ class Popup(QDialog):
         '''
         Constructor
         '''
-        QDialog.__init__(self)
+        QtWidgets.QDialog.__init__(self)
         self.context = context
 
         # since exec_() is unstable, use setModal()
@@ -116,28 +118,28 @@ class Popup(QDialog):
         #self.setModal(True)
 
         # ensure the widget it deleted when closed
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         # remove the window frame, ensure pop-up look and feel
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+        self.setWindowFlags(QtCore.Qt.FramelessWindowHint | QtCore.Qt.Popup)
 
         # create a label
-        self.label = QLabel('Create a new item...')
-        self.label.setAlignment(Qt.AlignCenter)
+        self.label = QtWidgets.QLabel('Create a new item...')
+        self.label.setAlignment(QtCore.Qt.AlignCenter)
 
         # create a search field and set it to accept custom events
-        self.lineEdit = QLineEdit('', self)
+        self.lineEdit = QtWidgets.QLineEdit('', self)
         self.lineEdit.installEventFilter(self)
         
         # create a non-editable list view and set it to accept custom events
-        self.listView = QListView()
+        self.listView = QtWidgets.QListView()
         self.listView.setFixedWidth(200)
         self.listView.installEventFilter(self)
-        self.listView.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.listView.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
 
         # set up a data model with filter proxy
         self.listModel = CustomStringModel(DATALIST)
-        self.proxyModel = QSortFilterProxyModel()
+        self.proxyModel = QtCore.QSortFilterProxyModel()
         self.proxyModel.setDynamicSortFilter(True)
         self.proxyModel.setSourceModel(self.listModel)
         
@@ -145,7 +147,7 @@ class Popup(QDialog):
         self.listView.setModel(self.proxyModel)
 
         # create a layout and add our widgets to it
-        self.layout = QVBoxLayout()
+        self.layout = QtWidgets.QVBoxLayout()
         self.layout.setSpacing(2)
         self.layout.setContentsMargins(2, 2, 2, 2)
         self.layout.addWidget(self.label)
@@ -166,7 +168,7 @@ class Popup(QDialog):
         Update the filtering on the QListView
         '''
         # define an expression to check against
-        self.regExp = QRegExp(self.lineEdit.text(), Qt.CaseInsensitive, QRegExp.FixedString)
+        self.regExp = QtCore.QRegExp(self.lineEdit.text(), QtCore.Qt.CaseInsensitive, QtCore.QRegExp.FixedString)
         
         # apply the regex as a filter, which will update the listView
         self.proxyModel.setFilterRegExp(self.regExp)
@@ -178,19 +180,19 @@ class Popup(QDialog):
         '''
         Catch specific events to create a streamlined behavior.
         '''
-        if event.type() == QEvent.KeyPress:
+        if event.type() == QtCore.QEvent.KeyPress:
             key = event.key()
 
-            if widget is self.lineEdit and key == Qt.Key_Down:
+            if widget is self.lineEdit and key == QtCore.Qt.Key_Down:
                 self.listView.setFocus()
                 self.listView.setCurrentIndex(self.listView.model().index(1,0))
                 return True
 
-            if widget is self.listView and key == Qt.Key_Backspace:
+            if widget is self.listView and key == QtCore.Qt.Key_Backspace:
                 self.lineEdit.setFocus()
                 return True
 
-            if widget is self.listView and key == Qt.Key_Return:
+            if widget is self.listView and key == QtCore.Qt.Key_Return:
                 self.process_selection()
                 return True
 
@@ -274,7 +276,7 @@ class GetItem ( lxu.command.BasicCommand ):
         self.popup = Popup(self.dyna_String(0))
 
         # Move the dialog to the cursor's position
-        self.popup.move( QCursor().pos() )
+        self.popup.move( QtGui.QCursor().pos() )
 
         # Using exec_() causes instabilities, so we'll use show() instead
         # and set the dialog as modal in its constructor.
@@ -285,4 +287,3 @@ class GetItem ( lxu.command.BasicCommand ):
 parse_all_the_things()
 lx.bless(CreateItem, "popup.createItem")
 lx.bless(GetItem, "popup.getItem")
-
