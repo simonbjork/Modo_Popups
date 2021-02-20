@@ -20,7 +20,7 @@ import re
 import traceback
 import sys
 
-# Append the bundled Qt.py at the beginning of sys.path.
+# Insert the bundled Qt.py at the beginning of sys.path.
 sys.path.insert(0, "{0}/vendor".format(os.path.dirname(__file__)))
 from Qt import QtCore, QtGui, QtWidgets
 
